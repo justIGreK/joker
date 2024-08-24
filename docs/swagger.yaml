@@ -1,0 +1,71 @@
+basePath: /
+host: localhost:8000
+info:
+  contact: {}
+  description: API Server for JOKER Application
+  title: Joker
+  version: "1.0"
+paths:
+  /jokes/:
+    get:
+      consumes:
+      - application/json
+      description: generate joke
+      produces:
+      - application/json
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: generate a joke
+      tags:
+      - joke
+  /user/sign-in:
+    post:
+      consumes:
+      - application/json
+      description: login
+      parameters:
+      - description: your login
+        in: query
+        name: login
+        required: true
+        type: string
+      - description: your password
+        in: query
+        name: password
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses: {}
+      summary: SignIn
+      tags:
+      - auth
+  /user/sign-up:
+    post:
+      consumes:
+      - application/json
+      description: create account
+      parameters:
+      - description: your login
+        in: query
+        name: login
+        required: true
+        type: string
+      - description: your password
+        in: query
+        name: password
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses: {}
+      summary: SignUp
+      tags:
+      - auth
+securityDefinitions:
+  BearerAuth:
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"
