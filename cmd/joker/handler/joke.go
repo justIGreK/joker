@@ -19,7 +19,7 @@ func (h *Handler) GetJoke(c *gin.Context) {
 	if err != nil {
 		newErrorResponse(c, http.StatusUnauthorized, err.Error())
 	}
-	joke, err := h.services.Users.GetRandomJoke(userId)
+	joke, err := h.Users.GetRandomJoke(userId)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			newErrorResponse(c, http.StatusUnauthorized, "login or password are incorrect")

@@ -24,13 +24,11 @@ import (
 func main() {
 
 	db, err := sqlx.Open("postgres", "postgresql://postgres:qwerty@localhost:5432/postgres?sslmode=disable")
-	repos := storage.NewStore(db)
 	if err != nil {
 		log.Fatal("error during opening db")
 	}
-
-	services := service.NewService(repos)
-	handler := handler.NewHandler(services)
+	repos := storage.NewUsersPostgres(db)
+	handler := handler.Handler{Users: service.NewUsersService(repos)} 
 	srv := new(internal.Server)
 	if err := srv.Run("8000", handler.InitRoutes()); err != nil {
 		log.Fatal("error during start server:", err.Error())

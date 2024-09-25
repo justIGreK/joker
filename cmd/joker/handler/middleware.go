@@ -8,6 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+
 const (
 	authorizationHeader = "Authorization"
 	userIdCtx           = "userId"
@@ -25,7 +26,7 @@ func (h *Handler) userIdentity(c *gin.Context) {
 		newErrorResponse(c, http.StatusUnauthorized, "invalid auth header")
 		return
 	}
-	userId, err := h.services.Users.ParseToken(headerParts[1])
+	userId, err := h.Users.ParseToken(headerParts[1])
 	if err != nil {
 		newErrorResponse(c, http.StatusUnauthorized, err.Error())
 		return

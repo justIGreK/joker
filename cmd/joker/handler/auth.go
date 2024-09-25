@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"jokegen/internal/service"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -9,6 +10,15 @@ import (
 type signInput struct {
 	Login    string `json:"login" binding:"required,alphanum"`
 	Password string `json:"password" binding:"required,min=6"`
+}
+type Users interface {
+	CreateUser(login string, password string) error
+	LoginUser(login string, password string) (int, error)
+	GetRandomJoke(userID int) (service.JokeResponse, error)
+	GenerateToken(login, password string) (string, error)
+	ParseToken(accessToken string) (int, error)
+	AddAttempts(userID, count int) error
+	AddAttemptsByLogin(login string, count int) error
 }
 
 // @Summary SignUp
@@ -25,7 +35,7 @@ func (h *Handler) signUp(c *gin.Context) {
 		Password: c.Query("password"),
 	}
 
-	err := h.services.Users.CreateUser(input.Login, input.Password)
+	err := h.Users.CreateUser(input.Login, input.Password)
 	if err != nil {
 		newErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
@@ -50,7 +60,7 @@ func (h *Handler) signIn(c *gin.Context) {
 		Password: c.Query("password"),
 	}
 
-	token, err := h.services.Users.GenerateToken(input.Login, input.Password)
+	token, err := h.Users.GenerateToken(input.Login, input.Password)
 	if err != nil {
 		newErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
@@ -67,7 +77,7 @@ func (h *Handler) checkUser(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
 		return
 	}
-	id, err := h.services.Users.LoginUser(input.Login, input.Password)
+	id, err := h.Users.LoginUser(input.Login, input.Password)
 	if err != nil {
 		newErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return

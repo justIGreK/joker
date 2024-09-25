@@ -10,14 +10,23 @@ import (
 	"github.com/nats-io/nats.go"
 )
 
+type Publisher interface {
+	AddAttempts(userID, count int) error
+}
+type Publish struct {
+	Publ Publisher
+}
 
+func NewPublish(users *service.UsersService) *Publish {
+	return &Publish{Publ: users}
+}
 
-func SubscribeNats(nc *nats.Conn, s *service.Publish) error {
+func (p *Publish)SubscribeNats(nc *nats.Conn) error {
 	_, err := nc.Subscribe("joker", func(m *nats.Msg) {
 		log.Println(string(m.Data))
 		pl := &models.Payload{}
 		json.Unmarshal(m.Data, pl)
-		addNewAttempts(pl, s)
+		p.addNewAttempts(pl)
 	})
 	if err != nil {
 		return fmt.Errorf("error during reading topic: %w", err)
@@ -26,11 +35,11 @@ func SubscribeNats(nc *nats.Conn, s *service.Publish) error {
 	return nil
 }
 
-func addNewAttempts(payload *models.Payload, s *service.Publish) {
+func (p *Publish)addNewAttempts(payload *models.Payload) {
 	newAttempts := int(payload.Price / 2)
-	err := s.AddAttempts(payload.UserID, newAttempts)
+	err := p.Publ.AddAttempts(payload.ServiceID, newAttempts)
 	if err != nil {
 		log.Printf("new attempts wasn't added because of this error: %v", err)
 	}
-	log.Printf("for user %v was added %v attempts", payload.UserID, newAttempts)
+	log.Printf("for user %v was added %v attempts", payload.ServiceID, newAttempts)
 }

@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"jokegen/internal/models"
 	"jokegen/internal/storage"
 	"net/http"
 	"time"
@@ -13,13 +14,20 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
+type Users interface {
+	CreateUser(login, password string) (int, error)
+	GetUser(login, password string) (models.User, error)
+	GetUserById(id int) (models.User, error)
+	UpdateUserAttempts(id, attempts int) error
+	UpdateUserAttemptsByLogin(login string, attempts int) error
+}
 type UsersService struct {
-	store storage.Users
+	User Users
 }
 
-type JokeResponse struct{
-	Joke Joke `json:"joke"`
-	RemainingAttempts int `json:"remainingAttempts"`
+type JokeResponse struct {
+	Joke              Joke `json:"joke"`
+	RemainingAttempts int  `json:"remainingAttempts"`
 }
 type Joke struct {
 	Setup     string `json:"setup"`
@@ -28,12 +36,12 @@ type Joke struct {
 
 const url string = "https://official-joke-api.appspot.com/random_joke"
 
-func NewUsersService(store storage.Users) *UsersService {
-	return &UsersService{store: store}
+func NewUsersService(users *storage.UsersPostgres) *UsersService {
+	return &UsersService{User: users}
 }
 
 func (s *UsersService) CreateUser(login string, password string) error {
-	_, err := s.store.CreateUser(login, password)
+	_, err := s.User.CreateUser(login, password)
 	if err != nil {
 		return fmt.Errorf("error during creating acc: %w", err)
 	}
@@ -41,10 +49,10 @@ func (s *UsersService) CreateUser(login string, password string) error {
 }
 
 func (s *UsersService) LoginUser(login string, password string) (int, error) {
-	user, err := s.store.GetUser(login, password)
+	user, err := s.User.GetUser(login, password)
 	if err != nil {
-		if err == sql.ErrNoRows{
-			return 0, err 
+		if err == sql.ErrNoRows {
+			return 0, err
 		}
 		return 0, fmt.Errorf("error during getting acc: %w", err)
 	}
@@ -55,11 +63,11 @@ func (s *UsersService) LoginUser(login string, password string) (int, error) {
 func (s *UsersService) GetRandomJoke(userID int) (JokeResponse, error) {
 	var response JokeResponse
 	var joke Joke
-	user, err := s.store.GetUserById(userID)
+	user, err := s.User.GetUserById(userID)
 	if err != nil {
 		return response, fmt.Errorf("error during getting userinfo: %w", err)
 	}
-	if  user.Attempts == 0 {
+	if user.Attempts == 0 {
 		return response, errors.New("you have run out of attempts")
 	}
 
@@ -78,26 +86,26 @@ func (s *UsersService) GetRandomJoke(userID int) (JokeResponse, error) {
 		return response, fmt.Errorf("error during unmarshal body: %w", err)
 	}
 
-	err = s.store.UpdateUserAttempts(userID, -1)
-	if err != nil{
+	err = s.User.UpdateUserAttempts(userID, -1)
+	if err != nil {
 		return response, fmt.Errorf("error during updating attempts: %w", err)
 	}
-	response.Joke = joke 
+	response.Joke = joke
 	response.RemainingAttempts = user.Attempts - 1
 	return response, nil
 }
 
-func (s *UsersService) AddAttempts(userID, count int) error{
-	err := s.store.UpdateUserAttempts(userID, count)
-	if err != nil{
+func (s *UsersService) AddAttempts(userID, count int) error {
+	err := s.User.UpdateUserAttempts(userID, count)
+	if err != nil {
 		return fmt.Errorf("error during adding attempts: %w", err)
 	}
 	return nil
 }
 
-func (s *UsersService) AddAttemptsByLogin(login string, count int) error{
-	err := s.store.UpdateUserAttemptsByLogin(login, count)
-	if err != nil{
+func (s *UsersService) AddAttemptsByLogin(login string, count int) error {
+	err := s.User.UpdateUserAttemptsByLogin(login, count)
+	if err != nil {
 		return fmt.Errorf("error during adding attempts: %w", err)
 	}
 	return nil
@@ -114,7 +122,7 @@ const (
 )
 
 func (s *UsersService) GenerateToken(login, password string) (string, error) {
-	user, err := s.store.GetUser(login, password)
+	user, err := s.User.GetUser(login, password)
 	if err != nil {
 		return "", fmt.Errorf("error during getting user:%w", err)
 	}
